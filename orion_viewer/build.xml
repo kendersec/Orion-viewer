@@ -110,7 +110,7 @@
 
                 <classpath>
                     <!--set there classpath to alex android.jar-->
-                    <fileset dir="../../alex/alex/" includes="*.jar" />
+                    <!-- <fileset dir="../../alex/alex/" includes="*.jar" />-->
                 </classpath>
             </javac>
 

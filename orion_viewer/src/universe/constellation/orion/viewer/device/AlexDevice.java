@@ -22,7 +22,7 @@ package universe.constellation.orion.viewer.device;
 import android.graphics.Point;
 import android.view.KeyEvent;
 import android.view.ViewGroup;
-import android.widget.EpdRender;
+//import android.widget.EpdRender;
 import android.widget.TextView;
 import universe.constellation.orion.viewer.*;
 
@@ -33,7 +33,7 @@ import universe.constellation.orion.viewer.*;
  */
 /* EpdRender is Highscreen/Spring Design Alex specific class,
  * if you are making build not for Alex just comment this class*/
-public class AlexDevice extends EpdRender implements Device {
+/*public class AlexDevice extends EpdRender implements Device {
 
     private OrionBaseActivity activity;
 
@@ -154,3 +154,4 @@ public class AlexDevice extends EpdRender implements Device {
         //To change body of implemented methods use File | Settings | File Templates.
     }
 }
+*/
