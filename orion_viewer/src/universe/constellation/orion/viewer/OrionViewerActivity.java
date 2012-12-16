@@ -35,7 +35,6 @@ import android.view.*;
 import android.view.inputmethod.EditorInfo;
 import android.widget.*;
 
-
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 import universe.constellation.orion.viewer.djvu.DjvuDocument;
@@ -103,6 +102,8 @@ public class OrionViewerActivity extends OrionBaseActivity {
     private SelectionAutomata textSelection;
 
     private SelectedTextActions selectedTextActions;
+    
+    private OrionGestureDetector gestureDetector;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -139,6 +140,8 @@ public class OrionViewerActivity extends OrionBaseActivity {
         initAddBookmarkScreen();
 
         myIntent = getIntent();
+        
+        gestureDetector = new OrionGestureDetector(getApplicationContext());
     }
 
 
@@ -274,6 +277,7 @@ public class OrionViewerActivity extends OrionBaseActivity {
             getSubscriptionManager().sendDocOpenedNotification(controller);
 
             getView().setController(controller);
+            gestureDetector.setController(controller);
 
             controller.drawPage();
 
@@ -1009,71 +1013,79 @@ public class OrionViewerActivity extends OrionBaseActivity {
             long startTime = 0;
             private static final long TIME_DELTA = 600;
             public boolean onTouch(View v, MotionEvent event) {
-                //Common.d("Event " + event.getAction() + ": "  + (SystemClock.uptimeMillis() - startTime));
-                if (!selectionMode) {
-                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                        //Common.d("DOWN " + event.getAction());
-                        startTime = SystemClock.uptimeMillis();
-                        lastX = (int) event.getX();
-                        lastY = (int) event.getY();
+                if (!gestureDetector.onTouchEvent(event)) {
+                    //Common.d("Event " + event.getAction() + ": "  + (SystemClock.uptimeMillis() - startTime));
+                    if (!selectionMode) {
+                        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                            //Common.d("DOWN " + event.getAction());
+                            startTime = SystemClock.uptimeMillis();
+                            lastX = (int) event.getX();
+                            lastY = (int) event.getY();
+                            return true;
+                        } else {
+        //                    Common.d("ev " + event.getAction());
+                            boolean doAction = false;
+                            if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_UP) {
+                                if (event.getAction() == MotionEvent.ACTION_UP) {
+                                    Common.d("UP " + event.getAction());
+                                    doAction = true;
+                                } else {
+                                    if (lastX != -1 && lastY != -1) {
+                                        boolean isLongClick = (SystemClock.uptimeMillis() - startTime) > TIME_DELTA;
+                                        doAction = isLongClick;
+                                    }
+                                }
+    
+                                if (doAction) {
+                                    Common.d("Check event action " + event.getAction());
+                                    boolean isLongClick = (SystemClock.uptimeMillis() - startTime) > TIME_DELTA;
+    
+                                    if (lastX != -1 && lastY != -1) {
+                                        int width = getView().getWidth();
+                                        int height = getView().getHeight();
+    
+                                        int i = 3 * lastY / height;
+                                        int j = 3 * lastX / width;
+    
+                                        int code = globalOptions.getActionCode(i, j, isLongClick);
+                                        doAction(code);
+    
+                                        startTime = 0;
+                                        lastX = -1;
+                                        lastY = -1;
+                                    }
+    
+                                }
+                                return true;
+                            } else if (event.getAction() == MotionEvent.ACTION_CANCEL || event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+                                startTime = 0;
+                                lastX = -1;
+                                lastY = -1;
+                            }
+                        }
                         return true;
                     } else {
-    //                    Common.d("ev " + event.getAction());
-                        boolean doAction = false;
-                        if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_UP) {
-                            if (event.getAction() == MotionEvent.ACTION_UP) {
-                                Common.d("UP " + event.getAction());
-                                doAction = true;
+                        boolean result = textSelection.onTouch(event);
+                        if (textSelection.isSuccessful()) {
+                            selectionMode = false;
+                            String text = controller.selectText(textSelection.getStartX(), textSelection.getStartY(), textSelection.getWidth(), textSelection.getHeight());
+                            if (text != null) {
+                                if (selectedTextActions == null) {
+                                    selectedTextActions = new SelectedTextActions(OrionViewerActivity.this);
+                                }
+                                selectedTextActions.show(text);
                             } else {
-                                if (lastX != -1 && lastY != -1) {
-                                    boolean isLongClick = (SystemClock.uptimeMillis() - startTime) > TIME_DELTA;
-                                    doAction = isLongClick;
-                                }
+    
                             }
-
-                            if (doAction) {
-                                Common.d("Check event action " + event.getAction());
-                                boolean isLongClick = (SystemClock.uptimeMillis() - startTime) > TIME_DELTA;
-
-                                if (lastX != -1 && lastY != -1) {
-                                    int width = getView().getWidth();
-                                    int height = getView().getHeight();
-
-                                    int i = 3 * lastY / height;
-                                    int j = 3 * lastX / width;
-
-                                    int code = globalOptions.getActionCode(i, j, isLongClick);
-                                    doAction(code);
-
-                                    startTime = 0;
-                                    lastX = -1;
-                                    lastY = -1;
-                                }
-
-                            }
-                            return true;
-                        } else if (event.getAction() == MotionEvent.ACTION_CANCEL || event.getAction() == MotionEvent.ACTION_OUTSIDE) {
-                            startTime = 0;
-                            lastX = -1;
-                            lastY = -1;
                         }
+                        return result;
                     }
-                    return true;
                 } else {
-                    boolean result = textSelection.onTouch(event);
-                    if (textSelection.isSuccessful()) {
-                        selectionMode = false;
-                        String text = controller.selectText(textSelection.getStartX(), textSelection.getStartY(), textSelection.getWidth(), textSelection.getHeight());
-                        if (text != null) {
-                            if (selectedTextActions == null) {
-                                selectedTextActions = new SelectedTextActions(OrionViewerActivity.this);
-                            }
-                            selectedTextActions.show(text);
-                        } else {
-
-                        }
-                    }
-                    return result;
+                    // Reset all if gesture triggered
+                    startTime = 0;
+                    lastX = -1;
+                    lastY = -1;
+                    return true;
                 }
             }
         });
